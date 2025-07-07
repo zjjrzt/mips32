@@ -97,7 +97,7 @@ wire [31:0] imm_ext = (rst_n == 1'b0) ? 32'b0 :
                       (upper ? (imm << 16) : (sext ? {{16{imm[15]}}, imm} : {16'b0, imm}));
 
 // 写寄存器地址选择
-assign id_wd_o = (rst_n == 1'b0) ? 5'b0 : (rtsel ? rt : rd);
+assign id_wa_o = (rst_n == 1'b0) ? 5'b0 : (rtsel ? rt : rd);
 // 写寄存器数据
 assign id_din_o = (rst_n == 1'b0) ? 32'b0 : rd2;
 

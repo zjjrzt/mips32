@@ -27,9 +27,6 @@ always @(posedge clk or negedge rst_n) begin
         wb_dre    <= 4'b0;
         wb_whilo  <= 1'b0;
         wb_hilo   <= 64'b0;
-        wb_dce    <= 1'b0;
-        wb_daddr  <= 32'b0;
-        wb_din    <= 32'b0;
     end else begin
         wb_dreg   <= mem_dreg;
         wb_wa     <= mem_wa;
@@ -38,9 +35,6 @@ always @(posedge clk or negedge rst_n) begin
         wb_dre    <= dre;
         wb_whilo  <= mem_whilo;
         wb_hilo   <= mem_hilo;
-        wb_dce    <= dce;
-        wb_daddr  <= daddr;
-        wb_din    <= din;
     end
 end
 
