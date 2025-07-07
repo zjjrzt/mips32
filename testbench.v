@@ -3,33 +3,42 @@
 module testbench;
     reg clk;
     reg rst_n;
-    wire [31:0] im_addr_o;
-    wire [31:0] im_data_i;
-    wire im_ce_o;
-    wire [31:0] dm_addr_o;
-    reg  [31:0] dm_data_i = 32'b0;
-    wire [31:0] dm_data_o;
-    wire dm_we_o;
-    wire dm_ce_o;
+    wire [31:0] iaddr;
+    wire ice;
+    wire [31:0] idata;
+    wire dce;
+    wire [31:0] daddr;
+    wire [3:0] we;
+    wire [31:0] din;
+    wire [31:0] dm;
 
     // 指令ROM实例化
     rom u_rom(
-        .addr(im_addr_o[4:0]),
-        .data(im_data_i)
+        .addr(iaddr[4:0]),
+        .data(idata)
     );
 
     // 实例化顶层模块
     top u_top(
         .clk(clk),
         .rst_n(rst_n),
-        .im_addr_o(im_addr_o),
-        .im_data_i(im_data_i),
-        .im_ce_o(im_ce_o),
-        .dm_addr_o(dm_addr_o),
-        .dm_data_i(dm_data_i),
-        .dm_data_o(dm_data_o),
-        .dm_we_o(dm_we_o),
-        .dm_ce_o(dm_ce_o)
+        .iaddr(iaddr),
+        .ice(ice),
+        .inst(idata),
+        .dce(dce),
+        .daddr(daddr),
+        .we(we),
+        .din(din),
+        .dm(dm)
+    );
+
+    ram u_ram(
+        .clk(clk),
+        .ena(dce),
+        .wea(we),
+        .addr(daddr[9:0]),
+        .dina(din),
+        .douta(dm)
     );
 
     // 50MHz时钟
@@ -41,7 +50,7 @@ module testbench;
         rst_n = 0;
         #100;
         rst_n = 1;
-        #99900;
+        #10000;
         $stop;
     end
 endmodule

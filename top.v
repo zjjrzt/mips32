@@ -1,10 +1,10 @@
 module top(
     input wire clk,
-    input wire cpu_rst_n,
+    input wire rst_n,
 
     output wire [31:0] iaddr,
     output wire ice,
-    input wire [31:0] idata,
+    input wire [31:0] inst,
 
     output wire dce,
     output wire [31:0] daddr,
@@ -97,8 +97,8 @@ wire [31:0] wb_wd_o;
 wire wb_wreg_o;
 
 //连接写回阶段与HILO寄存器
-wire [31:0] wb_hi_o;
-wire [31:0] wb_lo_o;
+wire wb_whilo_o;
+wire [63:0] wb_hilo_o;
 
 //例化取值阶段
 if_stage if_stage(
@@ -106,16 +106,15 @@ if_stage if_stage(
     .rst_n(rst_n),
     .ice(ice),
     .iaddr(iaddr),
-    .idata(idata),
     .pc(pc)
 );
 
 //例化取值译码寄存器
-if_id_reg if_id_reg(
+ifid_reg if_id_reg(
     .clk(clk),
     .rst_n(rst_n),
-    .pc_i(pc),
-    .pc_o(id_pc_i)
+    .if_pc(pc),
+    .id_pc(id_pc_i)
 );
 
 //例化译码阶段
@@ -155,7 +154,7 @@ regfile regfile(
 );
 
 //例化译码执行寄存器
-id_exe_reg id_exe_reg(
+idexe_reg id_exe_reg(
     .clk(clk),
     .rst_n(rst_n),
     .id_alutype(id_alutype_o),
@@ -220,35 +219,35 @@ exemem_reg exe_mem_reg(
     .mem_wreg(mem_wreg_i),
     .mem_mreg(mem_mreg_i),
     .mem_din(mem_din_i),
-    .mem_whilo(mem_whilo_i),
+    .mem_whilo(mem_whilo_i)
 );
 
 //例化访存阶段
 mem_stage mem_stage(
     .rst_n(rst_n),
-    .mem_alutype_i(mem_alutype_i),
     .mem_aluop_i(mem_aluop_i),
-    .mem_src1_i(mem_src1_i),
-    .mem_src2_i(mem_src2_i),
-    .mem_wreg_i(mem_wreg_i),
     .mem_wa_i(mem_wa_i),
-    .mem_wd_i(mem_wd_i),
+    .mem_wreg_i(mem_wreg_i),
     .mem_mreg_i(mem_mreg_i),
+    .mem_wd_i(mem_wd_i),
     .mem_din_i(mem_din_i),
-    .mem_whilo_i(mem_whilo_i),
     .mem_hilo_i(mem_hilo_i),
-    .mem_aluop_o(mem_aluop_o),
-    .mem_wreg_o(mem_wreg_o),
-    .mem_wa_o(mem_wa_o),
+    .mem_whilo_i(mem_whilo_i),
     .mem_dreg_o(mem_dreg_o),
+    .mem_wa_o(mem_wa_o),
+    .mem_wreg_o(mem_wreg_o),
     .mem_mreg_o(mem_mreg_o),
-    .mem_dre_o(mem_dre_o),
+    .dre(mem_dre_o),
     .mem_whilo_o(mem_whilo_o),
-    .mem_hilo_o(mem_hilo_o)
+    .mem_hilo_o(mem_hilo_o),
+    .dce(dce),
+    .daddr(daddr),
+    .din(din),
+    .we(we)
 );
 
 //例化访存写回寄存器
-mem_wb_reg mem_wb_reg(
+memwb_reg mem_wb_reg(
     .clk(clk),
     .rst_n(rst_n),
     .mem_dreg(mem_dreg_o),
@@ -286,7 +285,7 @@ wb_stage wb_stage(
 );
 
 //例化HILO寄存器
-hilo_reg hilo_reg(
+hilo hilo_reg(
     .clk(clk),
     .rst_n(rst_n),
     .hi_i(wb_hilo_o[63:32]),

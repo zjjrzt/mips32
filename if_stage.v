@@ -9,7 +9,7 @@ module if_stage
 );
 
 wire [31:0] pc_next; //下一个pc值
-assign pc_next = pc + 4;
+assign pc_next = pc + 1;
 
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -22,7 +22,7 @@ end
 
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-        pc <= 32'h00003000; //复位时pc的初始值
+        pc <= 32'h00000000; //复位时pc的初始值
     end
     else begin
         pc <= pc_next; //时钟上升沿更新pc值
