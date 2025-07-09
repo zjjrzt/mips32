@@ -31,7 +31,9 @@ module exe_stage(
     input wire [63:0] mem_2exe_hilo,
     //从写回阶段获得的HI、LO寄存器数据
     input wire wb2exe_whilo,
-    input wire [63:0] wb2exe_hilo
+    input wire [63:0] wb2exe_hilo,
+    //转移指令相关代码
+    input wire [31:0] ret_addr
 );
 
     // 逻辑运算结果
@@ -86,6 +88,7 @@ module exe_stage(
         (exe_alutype_i == 3'b100) ? shiftres : // SHIFT
         (exe_alutype_i == 3'b011) ? moveres  : // MOVE
         (exe_alutype_i == 3'b001) ? arithres : // ARITH
+        (exe_alutype_i == 3'b101) ? ret_addr :
         32'b0;
 
 endmodule

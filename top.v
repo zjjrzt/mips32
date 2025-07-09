@@ -99,6 +99,15 @@ wire wb_wreg_o;
 //连接写回阶段与HILO寄存器
 wire wb_whilo_o;
 wire [63:0] wb_hilo_o;
+//转移指令相关
+wire [31:0] jump_addr_1; //跳转指令的地址1
+wire [31:0] jump_addr_2; //跳转指令的地址2
+wire [31:0] jump_addr_3; //跳转指令的地址3
+wire [1:0] jtsel;        //跳转选择信号
+wire [31:0] ret_addr;    //返回地址
+wire [31:0] pc_plus_4;   //pc+4
+wire [31:0] id_pc_plus_4;
+wire [31:0] id_ret_addr;
 
 //例化取值阶段
 if_stage if_stage(
@@ -106,7 +115,12 @@ if_stage if_stage(
     .rst_n(rst_n),
     .ice(ice),
     .iaddr(iaddr),
-    .pc(pc)
+    .pc(pc),
+    .pc_plus_4(pc_plus_4),
+    .jump_addr_1(jump_addr_1),
+    .jump_addr_2(jump_addr_2),
+    .jump_addr_3(jump_addr_3),
+    .jtsel(jtsel)
 );
 
 //例化取值译码寄存器
@@ -114,7 +128,9 @@ ifid_reg if_id_reg(
     .clk(clk),
     .rst_n(rst_n),
     .if_pc(pc),
-    .id_pc(id_pc_i)
+    .id_pc(id_pc_i),
+    .if_pc_plus_4(pc_plus_4),
+    .id_pc_plus_4(id_pc_plus_4)
 );
 
 //例化译码阶段
@@ -141,7 +157,13 @@ id_stage id_stage(
     .exe2id_wd(exe_wd_o),
     .mem2id_wa(mem_wa_o),
     .mem2id_wreg(mem_wreg_o),
-    .mem2id_wd(mem_dreg_o)
+    .mem2id_wd(mem_dreg_o),
+    .jump_addr_1(jump_addr_1),
+    .jump_addr_2(jump_addr_2),
+    .jump_addr_3(jump_addr_3),
+    .jtsel(jtsel),
+    .ret_addr(ret_addr),
+    .pc_plus_4(id_pc_plus_4)
 );
 
 //例化通用寄存器堆
@@ -180,7 +202,9 @@ idexe_reg id_exe_reg(
     .exe_wa(exe_wa_i),
     .exe_whilo(whilo_i),
     .exe_mreg(mreg_i),
-    .exe_din(exe_din_i)
+    .exe_din(exe_din_i),
+    .id_ret_addr(ret_addr),
+    .exe_ret_addr(id_ret_addr)
 );
 
 //例化执行阶段
@@ -208,7 +232,8 @@ exe_stage exe_stage(
     .mem_2exe_whilo(mem_whilo_o),
     .mem_2exe_hilo(mem_hilo_o),
     .wb2exe_whilo(wb_whilo_o),
-    .wb2exe_hilo(wb_hilo_o)
+    .wb2exe_hilo(wb_hilo_o),
+    .ret_addr(id_ret_addr)
     );
 
 //例化执行访存寄存器

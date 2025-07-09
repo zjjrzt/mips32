@@ -13,10 +13,14 @@ module testbench;
     wire [31:0] dm;
 
     // 指令ROM实例化
-    rom u_rom(
-        .addr(iaddr[4:0]),
-        .data(idata)
-    );
+    blk_mem_gen_0 your_instance_name (
+  .clka(clk),    // input wire clka
+  .ena(ice),      // input wire ena
+  .wea(0),      // input wire [0 : 0] wea
+  .addra(iaddr[10:0]),  // input wire [10 : 0] addra
+  .dina(dina),    // input wire [31 : 0] dina
+  .douta(idata)  // output wire [31 : 0] douta
+);
 
     // 实例化顶层模块
     top u_top(
@@ -53,7 +57,7 @@ module testbench;
         rst_n = 1;
         // 等待ROM内所有指令执行完毕（假设每条指令1周期，实际可根据iaddr最大值判断）
         instr_count = 0;
-        wait (iaddr == 11); // iaddr到达最后一条指令的下一个地址
+        wait (iaddr == 156); // iaddr到达最后一条指令的下一个地址
         // 再等10个时钟周期
         repeat(10) @(posedge clk);
         $stop;

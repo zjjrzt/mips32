@@ -28,7 +28,14 @@ module id_stage(
     //从访存阶段获得的写回信号
     input wire mem2id_wreg, //是否写入寄存器堆
     input wire [4:0] mem2id_wa,    //写入寄存器堆的地址
-    input wire [31:0] mem2id_wd    //写入寄存器堆的数据
+    input wire [31:0] mem2id_wd,    //写入寄存器堆的数据
+    //添加转移指令相关代码
+    input wire [31:0] pc_plus_4, //译码阶段的pc加4值
+    output wire [31:0] jump_addr_1, //跳转指令的地址1
+    output wire [31:0] jump_addr_2, //跳转指令的地址2
+    output wire [31:0] jump_addr_3, //跳转指令的地址3
+    output wire [1:0] jtsel ,   //跳转选择信号
+    output wire [31:0] ret_addr
 );
 
 
@@ -65,6 +72,7 @@ assign id_din_o = (rst_n == 1'b0) ? 32'b0 :
                     (rreg2) ? rd2 : 32'b0; //从寄存器堆读取
 
 //第一级译码逻辑
+
 wire inst_reg  = ~|op;
 wire inst_add  = inst_reg & funct[5] & ~funct[4] & ~funct[3] & ~funct[2] & ~funct[1] & ~funct[0];
 wire inst_subu = inst_reg & funct[5] & ~funct[4] & ~funct[3] & ~funct[2] &  funct[1] &  funct[0];
@@ -83,23 +91,33 @@ wire inst_lw   =  op[5] & ~op[4] & ~op[3] & ~op[2] &  op[1] &  op[0];
 wire inst_sb   =  op[5] & ~op[4] &  op[3] & ~op[2] & ~op[1] & ~op[0];
 wire inst_sw   =  op[5] & ~op[4] &  op[3] & ~op[2] &  op[1] &  op[0];
 
+wire inst_i = ~op[5] & ~op[4] & ~op[3] & ~op[2] & op[1] & ~op[0];
+wire inst_jal = ~op[5] & ~op[4] & ~op[3] & ~op[2] & op[1] & op[0];
+wire inst_jr = inst_reg & ~funct[5] & ~funct[4] & funct[3] & ~funct[2] & ~funct[1] & funct[0];
+wire inst_beq = ~op[5] & ~op[4] & ~op[3] & op[2] & ~op[1] & ~op[0];
+wire inst_ben = ~op[5] & ~op[4] & ~op[3] & op[2] & ~op[1] & op[0];
+wire equ = (rst_n == 1'b0) ?1'b0 :
+            (inst_beq) ? (id_src1_o == id_src2_o) : //等于
+            (inst_ben) ? (id_src1_o != id_src2_o) : //不等于
+            1'b0; //默认不等于
+
 // ALU类型输出
-assign id_alutype_o[2] = (rst_n == 1'b0) ? 1'b0 : inst_sll;
+assign id_alutype_o[2] = (rst_n == 1'b0) ? 1'b0 : (inst_sll || inst_i || inst_jal || inst_jr || inst_beq || inst_ben);
 assign id_alutype_o[1] = (rst_n == 1'b0) ? 1'b0 : (inst_and | inst_mfhi | inst_mflo | inst_ori | inst_lui);
-assign id_alutype_o[0] = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_slt | inst_mfhi | inst_mflo | inst_addiu | inst_sltiu | inst_lb | inst_lw | inst_sb | inst_sw);
+assign id_alutype_o[0] = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_slt | inst_mfhi | inst_mflo | inst_addiu | inst_sltiu | inst_lb | inst_lw | inst_sb | inst_sw | inst_i | inst_jal | inst_jr | inst_beq | inst_ben);
 
 // ALU操作码输出
 assign id_aluop_o[7] = (rst_n == 1'b0) ? 1'b0 : (inst_lb | inst_lw | inst_sb | inst_sw);
 assign id_aluop_o[6] = 1'b0;
-assign id_aluop_o[5] = (rst_n == 1'b0) ? 1'b0 : (inst_slt | inst_sltiu);
-assign id_aluop_o[4] = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_and | inst_mult | inst_sll | inst_ori | inst_addiu | inst_lb | inst_lw | inst_sb | inst_sw);
-assign id_aluop_o[3] = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_and | inst_mfhi | inst_mflo | inst_ori | inst_addiu | inst_sb | inst_sw);
-assign id_aluop_o[2] = (rst_n == 1'b0) ? 1'b0 : (inst_slt | inst_and | inst_mult | inst_mfhi | inst_mflo | inst_ori | inst_lui | inst_sltiu);
-assign id_aluop_o[1] = (rst_n == 1'b0) ? 1'b0 : (inst_subu | inst_slt | inst_sltiu | inst_lw | inst_sw);
-assign id_aluop_o[0] = (rst_n == 1'b0) ? 1'b0 : (inst_subu | inst_mflo | inst_sll | inst_ori | inst_lui | inst_addiu | inst_sltiu);
+assign id_aluop_o[5] = (rst_n == 1'b0) ? 1'b0 : (inst_slt | inst_sltiu | inst_i | inst_jal | inst_jr | inst_beq | inst_ben);
+assign id_aluop_o[4] = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_and | inst_mult | inst_sll | inst_ori | inst_addiu | inst_lb | inst_lw | inst_sb | inst_sw | inst_beq | inst_ben);
+assign id_aluop_o[3] = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_and | inst_mfhi | inst_mflo | inst_ori | inst_addiu | inst_sb | inst_sw | inst_i | inst_jal | inst_jr);
+assign id_aluop_o[2] = (rst_n == 1'b0) ? 1'b0 : (inst_slt | inst_and | inst_mult | inst_mfhi | inst_mflo | inst_ori | inst_lui | inst_sltiu |inst_i | inst_jal | inst_jr);
+assign id_aluop_o[1] = (rst_n == 1'b0) ? 1'b0 : (inst_subu | inst_slt | inst_sltiu | inst_lw | inst_sw | inst_jal);
+assign id_aluop_o[0] = (rst_n == 1'b0) ? 1'b0 : (inst_subu | inst_mflo | inst_sll | inst_ori | inst_lui | inst_addiu | inst_sltiu | inst_jr | inst_ben);
 
 // 写寄存器堆使能
-assign id_wreg_o = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_slt | inst_and | inst_mfhi | inst_mflo | inst_sll | inst_ori | inst_lui | inst_addiu | inst_sltiu | inst_lb | inst_lw);
+assign id_wreg_o = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_slt | inst_and | inst_mfhi | inst_mflo | inst_sll | inst_ori | inst_lui | inst_addiu | inst_sltiu | inst_lb | inst_lw | inst_jal);
 // 写HI/LO寄存器使能
 assign id_whilo_o = (rst_n == 1'b0) ? 1'b0 : inst_mult;
 // 访问存储器使能
@@ -113,19 +131,27 @@ wire sext   = inst_addiu | inst_sltiu | inst_lb | inst_lw | inst_sb | inst_sw;
 wire upper  = inst_lui;
 
 // 读寄存器使能
-assign rreg1 = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_slt | inst_and | inst_mult | inst_ori | inst_addiu | inst_sltiu | inst_lb | inst_lw | inst_sb | inst_sw);
-assign rreg2 = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_slt | inst_and | inst_mult | inst_sll | inst_sb | inst_sw);
+assign rreg1 = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_slt | inst_and | inst_mult | inst_ori | inst_addiu | inst_sltiu | inst_lb | inst_lw | inst_sb | inst_sw | inst_jr | inst_beq | inst_ben);
+assign rreg2 = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_slt | inst_and | inst_mult | inst_sll | inst_sb | inst_sw | inst_beq | inst_ben);
 
 // 读寄存器地址
 assign ra1 = (rst_n == 1'b0) ? 5'b0 : rs;
 assign ra2 = (rst_n == 1'b0) ? 5'b0 : rt;
+
+//转移地址信号
+wire jal = inst_jal;
+assign jtsel[1] = inst_jr | inst_beq & equ | inst_ben & equ; //跳转选择信号1
+assign jtsel[0] = inst_i | inst_jal | inst_beq & equ | inst_ben & equ; //跳转选择信号0
 
 // 立即数扩展
 wire [31:0] imm_ext = (rst_n == 1'b0) ? 32'b0 :
                       (upper ? (imm << 16) : (sext ? {{16{imm[15]}}, imm} : {16'b0, imm}));
 
 // 写寄存器地址选择
-assign id_wa_o = (rst_n == 1'b0) ? 5'b0 : (rtsel ? rt : rd);
+assign id_wa_o = (rst_n == 1'b0) ? 5'b0 :
+                    (rtsel) ? rt : //立即数指令，使用rt作为写寄存器地址
+                    (jal) ? 5'b11111 : //jal指令，使用$ra寄存器
+                    rd; //其他指令，使用rd作为写寄存器地址
 // 写寄存器数据
 //assign id_din_o = (rst_n == 1'b0) ? 32'b0 : rd2;
 
@@ -143,6 +169,15 @@ assign id_src2_o = (rst_n == 1'b0) ? 32'b0 :
                     (fwrd2 == 2'b01) ? exe2id_wd : //从执行阶段转发
                     (fwrd2 == 2'b10) ? mem2id_wd : //
                     (fwrd2 == 2'b11) ? rd2 : 32'b0; //从寄存器堆读取
+
+//转移地址所需代码
+wire [31:0] pc_plus_8 = pc_plus_4 + 4;
+wire [25:0] instr_index = id_inst[25:0]; //指令索引
+wire [31:0] imm_jump = {{14{imm[15]}}, imm, 2'b00}; //立即数跳转地址
+assign jump_addr_1 = {pc_plus_4[31:28], instr_index, 2'b00}; //跳转指令的地址1
+assign jump_addr_2 = pc_plus_8 + imm_jump; //跳转指令的地址2
+assign jump_addr_3 = id_src1_o; //跳转指令的地址3
+assign ret_addr = pc_plus_8; //返回地址
 
 
 endmodule
