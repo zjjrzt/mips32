@@ -46,11 +46,16 @@ module testbench;
     always #10 clk = ~clk; // 20ns周期
 
     // 仿真控制
+    integer instr_count;
     initial begin
         rst_n = 0;
         #100;
         rst_n = 1;
-        #10000;
+        // 等待ROM内所有指令执行完毕（假设每条指令1周期，实际可根据iaddr最大值判断）
+        instr_count = 0;
+        wait (iaddr == 11); // iaddr到达最后一条指令的下一个地址
+        // 再等10个时钟周期
+        repeat(10) @(posedge clk);
         $stop;
     end
 endmodule

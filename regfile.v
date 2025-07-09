@@ -38,6 +38,9 @@ always @(*) begin
         rd1 = 32'b0;
     end else if (ra1 == 5'b0) begin
         rd1 = 32'b0;
+    end else if (re1 && we && wa == ra1) begin
+        // 如果当前写入的寄存器地址与读寄存器1的地址相同，直接返回写入的数据
+        rd1 = wd;
     end else begin
         rd1 = regfile[ra1];
     end
@@ -49,6 +52,9 @@ always @(*) begin
         rd2 = 32'b0;
     end else if (ra2 == 5'b0) begin
         rd2 = 32'b0;
+    end else if (re2 && we && wa == ra2) begin
+        // 如果当前写入的寄存器地址与读寄存器2的地址相同，直接返回写入的数据
+        rd2 = wd;
     end else begin
         rd2 = regfile[ra2];
     end

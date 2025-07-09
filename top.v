@@ -135,7 +135,13 @@ id_stage id_stage(
     .id_wa_o(id_wa_o),
     .id_whilo_o(whilo_o),
     .id_mreg_o(mreg_o),
-    .id_din_o(id_din_o)
+    .id_din_o(id_din_o),
+    .exe2id_wa(exe_wa_o),
+    .exe2id_wreg(exe_wreg_o),
+    .exe2id_wd(exe_wd_o),
+    .mem2id_wa(mem_wa_o),
+    .mem2id_wreg(mem_wreg_o),
+    .mem2id_wd(mem_dreg_o)
 );
 
 //例化通用寄存器堆
@@ -198,7 +204,11 @@ exe_stage exe_stage(
     .exe_mreg_o(exe_mreg_o),
     .exe_din_o(exe_din_o),
     .exe_whilo_o(exe_whilo_o),
-    .exe_hilo_o(exe_hilo_o)
+    .exe_hilo_o(exe_hilo_o),
+    .mem_2exe_whilo(mem_whilo_o),
+    .mem_2exe_hilo(mem_hilo_o),
+    .wb2exe_whilo(wb_whilo_o),
+    .wb2exe_hilo(wb_hilo_o)
     );
 
 //例化执行访存寄存器
@@ -219,7 +229,8 @@ exemem_reg exe_mem_reg(
     .mem_wreg(mem_wreg_i),
     .mem_mreg(mem_mreg_i),
     .mem_din(mem_din_i),
-    .mem_whilo(mem_whilo_i)
+    .mem_whilo(mem_whilo_i),
+    .mem_hilo(mem_hilo_i)
 );
 
 //例化访存阶段

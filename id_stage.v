@@ -20,8 +20,17 @@ module id_stage(
     output wire rreg1,
     output wire rreg2,
     output wire [4:0] ra1,
-    output wire [4:0] ra2
+    output wire [4:0] ra2,
+    //从执行阶段获得的写回信号
+    input wire exe2id_wreg, //是否写入寄存器堆
+    input wire [4:0] exe2id_wa,    //写入寄存器堆的地址
+    input wire [31:0] exe2id_wd,   //写入寄存器堆的数据
+    //从访存阶段获得的写回信号
+    input wire mem2id_wreg, //是否写入寄存器堆
+    input wire [4:0] mem2id_wa,    //写入寄存器堆的地址
+    input wire [31:0] mem2id_wd    //写入寄存器堆的数据
 );
+
 
 //将大端模式的指令转换为小端模式
 wire [31:0] id_inst = {id_inst_i[7:0], id_inst_i[15:8], id_inst_i[23:16], id_inst_i[31:24]};
@@ -35,6 +44,25 @@ wire [4:0] sa = id_inst[10:6]; //移位量
 wire [5:0] funct = id_inst[5:0]; //功能码
 wire [15:0] imm = id_inst[15:0]; //立即数
 
+//产生源操作数选择信号
+wire [1:0] fwrd1 = (rst_n == 1'b0) ? 2'b00 : 
+                    (exe2id_wreg && exe2id_wa == ra1 && rreg1) ? 2'b01 : 
+                    (mem2id_wreg && mem2id_wa == ra1 && rreg1) ? 2'b10 :
+                    (rreg1) ? 2'b11 : 2'b00; // 00:不转发，01:从执行阶段转发，10:从访存阶段转发，11:从寄存器堆读取
+
+wire [1:0] fwrd2 = (rst_n == 1'b0) ? 2'b00 :
+                    (exe2id_wreg && exe2id_wa == ra2 && rreg2) ? 2'b01 : 
+                    (mem2id_wreg && mem2id_wa == ra2 && rreg2) ? 2'b10 :
+                    (rreg2) ? 2'b11 : 2'b00; // 00:不转发，01:从执行阶段转发，10:从访存阶段转发，11:从寄存器堆读取
+
+//选择源操作数
+
+
+//获得访存阶段要存入数据存储器的数据
+assign id_din_o = (rst_n == 1'b0) ? 32'b0 :
+                    (fwrd1) ? exe2id_wd : //从执行阶段转发
+                    (fwrd2) ? mem2id_wd : //从访存阶段转
+                    (rreg2) ? rd2 : 32'b0; //从寄存器堆读取
 
 //第一级译码逻辑
 wire inst_reg  = ~|op;
@@ -99,11 +127,22 @@ wire [31:0] imm_ext = (rst_n == 1'b0) ? 32'b0 :
 // 写寄存器地址选择
 assign id_wa_o = (rst_n == 1'b0) ? 5'b0 : (rtsel ? rt : rd);
 // 写寄存器数据
-assign id_din_o = (rst_n == 1'b0) ? 32'b0 : rd2;
+//assign id_din_o = (rst_n == 1'b0) ? 32'b0 : rd2;
 
 // 源操作数选择
-assign id_src1_o = (rst_n == 1'b0) ? 32'b0 : (shift ? {27'b0, sa} : (rreg1 ? rd1 : 32'b0));
-assign id_src2_o = (rst_n == 1'b0) ? 32'b0 : (immsel ? imm_ext : (rreg2 ? rd2 : 32'b0));
+//assign id_src1_o = (rst_n == 1'b0) ? 32'b0 : (shift ? {27'b0, sa} : (rreg1 ? rd1 : 32'b0));
+//assign id_src2_o = (rst_n == 1'b0) ? 32'b0 : (immsel ? imm_ext : (rreg2 ? rd2 : 32'b0));
+assign id_src1_o = (rst_n == 1'b0) ? 32'b0 : 
+                    (shift) ? {27'b0, sa} : //移位指令，使用移位量
+                    (fwrd1 == 2'b01) ? exe2id_wd : //从执行阶段转发
+                    (fwrd1 == 2'b10) ? mem2id_wd : //从访存阶段转发
+                    (fwrd1 == 2'b11) ? rd1 : 32'b0;
+
+assign id_src2_o = (rst_n == 1'b0) ? 32'b0 :
+                    (immsel) ? imm_ext : //立即数指令，使用扩展后的立即数
+                    (fwrd2 == 2'b01) ? exe2id_wd : //从执行阶段转发
+                    (fwrd2 == 2'b10) ? mem2id_wd : //
+                    (fwrd2 == 2'b11) ? rd2 : 32'b0; //从寄存器堆读取
 
 
 endmodule

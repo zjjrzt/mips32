@@ -25,7 +25,13 @@ module exe_stage(
     output wire exe_mreg_o,     //是否访问寄存器堆
     output wire exe_whilo_o,    //是否写入HI/LO寄存器
     output wire [31:0] exe_din_o,       //写入寄存器堆的数据
-    output wire [63:0] exe_hilo_o    //HI/LO寄存器数据
+    output wire [63:0] exe_hilo_o,    //HI/LO寄存器数据
+    //从访存阶段获得的HI、LO寄存器数据
+    input wire mem_2exe_whilo,
+    input wire [63:0] mem_2exe_hilo,
+    //从写回阶段获得的HI、LO寄存器数据
+    input wire wb2exe_whilo,
+    input wire [63:0] wb2exe_hilo
 );
 
     // 逻辑运算结果
@@ -39,8 +45,12 @@ module exe_stage(
         (exe_aluop_i == 8'h11) ? (exe_src2_i << exe_src1_i) : 32'b0; // SLL
 
     // HI/LO相关
-    wire [31:0] hi_t = (rst_n == 1'b0) ? 32'b0 : hi_i;
-    wire [31:0] lo_t = (rst_n == 1'b0) ? 32'b0 : lo_i;
+    wire [31:0] hi_t = (rst_n == 1'b0) ? 32'b0 : 
+                        (mem_2exe_whilo) ? mem_2exe_hilo[63:32] :
+                        (wb2exe_whilo) ? wb2exe_hilo[63:32] : hi_i;
+    wire [31:0] lo_t = (rst_n == 1'b0) ? 32'b0 : 
+                        (mem_2exe_whilo) ? mem_2exe_hilo[31:0] :
+                        (wb2exe_whilo) ? wb2exe_hilo[31:0] : lo_i;
     wire [31:0] moveres = (rst_n == 1'b0) ? 32'b0 :
         (exe_aluop_i == 8'h0C) ? hi_t : // MFHI
         (exe_aluop_i == 8'h0D) ? lo_t : 32'b0; // MFLO
