@@ -35,7 +35,11 @@ module id_stage(
     output wire [31:0] jump_addr_2, //跳转指令的地址2
     output wire [31:0] jump_addr_3, //跳转指令的地址3
     output wire [1:0] jtsel ,   //跳转选择信号
-    output wire [31:0] ret_addr
+    output wire [31:0] ret_addr,
+    //暂停相关信号
+    input wire exe2id_mreg,
+    input wire mem2id_mreg,
+    output wire stallreq_id
 );
 
 
@@ -74,6 +78,7 @@ assign id_din_o = (rst_n == 1'b0) ? 32'b0 :
 //第一级译码逻辑
 
 wire inst_reg  = ~|op;
+wire inst_div = inst_reg & ~funct[5] &  funct[4] &  funct[3] & ~funct[2] & funct[1] & ~funct[0];
 wire inst_add  = inst_reg & funct[5] & ~funct[4] & ~funct[3] & ~funct[2] & ~funct[1] & ~funct[0];
 wire inst_subu = inst_reg & funct[5] & ~funct[4] & ~funct[3] & ~funct[2] &  funct[1] &  funct[0];
 wire inst_slt  = inst_reg & funct[5] & ~funct[4] &  funct[3] & ~funct[2] &  funct[1] & ~funct[0];
@@ -110,16 +115,16 @@ assign id_alutype_o[0] = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_s
 assign id_aluop_o[7] = (rst_n == 1'b0) ? 1'b0 : (inst_lb | inst_lw | inst_sb | inst_sw);
 assign id_aluop_o[6] = 1'b0;
 assign id_aluop_o[5] = (rst_n == 1'b0) ? 1'b0 : (inst_slt | inst_sltiu | inst_i | inst_jal | inst_jr | inst_beq | inst_ben);
-assign id_aluop_o[4] = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_and | inst_mult | inst_sll | inst_ori | inst_addiu | inst_lb | inst_lw | inst_sb | inst_sw | inst_beq | inst_ben);
+assign id_aluop_o[4] = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_and | inst_mult | inst_sll | inst_ori | inst_addiu | inst_lb | inst_lw | inst_sb | inst_sw | inst_beq | inst_ben | inst_div);
 assign id_aluop_o[3] = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_and | inst_mfhi | inst_mflo | inst_ori | inst_addiu | inst_sb | inst_sw | inst_i | inst_jal | inst_jr);
-assign id_aluop_o[2] = (rst_n == 1'b0) ? 1'b0 : (inst_slt | inst_and | inst_mult | inst_mfhi | inst_mflo | inst_ori | inst_lui | inst_sltiu |inst_i | inst_jal | inst_jr);
-assign id_aluop_o[1] = (rst_n == 1'b0) ? 1'b0 : (inst_subu | inst_slt | inst_sltiu | inst_lw | inst_sw | inst_jal);
+assign id_aluop_o[2] = (rst_n == 1'b0) ? 1'b0 : (inst_slt | inst_and | inst_mult | inst_mfhi | inst_mflo | inst_ori | inst_lui | inst_sltiu |inst_i | inst_jal | inst_jr | inst_div);
+assign id_aluop_o[1] = (rst_n == 1'b0) ? 1'b0 : (inst_subu | inst_slt | inst_sltiu | inst_lw | inst_sw | inst_jal | inst_div);
 assign id_aluop_o[0] = (rst_n == 1'b0) ? 1'b0 : (inst_subu | inst_mflo | inst_sll | inst_ori | inst_lui | inst_addiu | inst_sltiu | inst_jr | inst_ben);
 
 // 写寄存器堆使能
 assign id_wreg_o = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_slt | inst_and | inst_mfhi | inst_mflo | inst_sll | inst_ori | inst_lui | inst_addiu | inst_sltiu | inst_lb | inst_lw | inst_jal);
 // 写HI/LO寄存器使能
-assign id_whilo_o = (rst_n == 1'b0) ? 1'b0 : inst_mult;
+assign id_whilo_o = (rst_n == 1'b0) ? 1'b0 : (inst_mult | inst_div);
 // 访问存储器使能
 assign id_mreg_o = (rst_n == 1'b0) ? 1'b0 : (inst_lb | inst_lw);
 
@@ -131,8 +136,8 @@ wire sext   = inst_addiu | inst_sltiu | inst_lb | inst_lw | inst_sb | inst_sw;
 wire upper  = inst_lui;
 
 // 读寄存器使能
-assign rreg1 = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_slt | inst_and | inst_mult | inst_ori | inst_addiu | inst_sltiu | inst_lb | inst_lw | inst_sb | inst_sw | inst_jr | inst_beq | inst_ben);
-assign rreg2 = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_slt | inst_and | inst_mult | inst_sll | inst_sb | inst_sw | inst_beq | inst_ben);
+assign rreg1 = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_slt | inst_and | inst_mult | inst_ori | inst_addiu | inst_sltiu | inst_lb | inst_lw | inst_sb | inst_sw | inst_jr | inst_beq | inst_ben | inst_div);
+assign rreg2 = (rst_n == 1'b0) ? 1'b0 : (inst_add | inst_subu | inst_slt | inst_and | inst_mult | inst_sll | inst_sb | inst_sw | inst_beq | inst_ben | inst_div);
 
 // 读寄存器地址
 assign ra1 = (rst_n == 1'b0) ? 5'b0 : rs;
@@ -178,6 +183,11 @@ assign jump_addr_1 = {pc_plus_4[31:28], instr_index, 2'b00}; //跳转指令的�
 assign jump_addr_2 = pc_plus_8 + imm_jump; //跳转指令的地址2
 assign jump_addr_3 = id_src1_o; //跳转指令的地址3
 assign ret_addr = pc_plus_8; //返回地址
+
+//暂停相关信号
+assign stallreq_id = (rst_n == 1'b0) ? 1'b0 :
+                        (((exe2id_wreg && exe2id_wa == ra1 && rreg1) || (exe2id_wreg && exe2id_wa == ra2 &&rreg2)) && (exe2id_mreg)) ? 1'b1 :
+                        (((mem2id_wreg && mem2id_wa == ra1 && rreg1) || (mem2id_wreg && mem2id_wa == ra2 && rreg2)) && (mem2id_mreg)) ? 1'b1 : 1'b0; //暂停信号
 
 
 endmodule

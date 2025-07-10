@@ -33,7 +33,10 @@ module exe_stage(
     input wire wb2exe_whilo,
     input wire [63:0] wb2exe_hilo,
     //转移指令相关代码
-    input wire [31:0] ret_addr
+    input wire [31:0] ret_addr,
+    //除法运算相关代码
+    input wire clk,
+    output wire stallreq_exe
 );
 
     // 逻辑运算结果
@@ -71,8 +74,84 @@ module exe_stage(
 
     // 乘法结果
     wire [63:0] mulres = $signed(exe_src1_i) * $signed(exe_src2_i);
+
+    // 除法相关信号与状态机（全新实现，标准32次移位减法）
+    reg  [63:0] divres;
+    reg  [5:0]  div_cnt;
+    reg  [1:0]  state;
+    reg         div_ready;
+    reg  [31:0] dividend_reg, divisor_reg;
+    reg  [31:0] quotient, remainder;
+    reg         div_sign;
+    reg         busy;
+    wire        div_start = (rst_n == 1'b0) ? 1'b0 : ((exe_aluop_i == 8'h16) && (div_ready == 1'b0)) ? 1'b1 : 1'b0;
+    // 除法暂停信号
+    assign stallreq_exe = (rst_n == 1'b0) ? 1'b0 : ((exe_aluop_i == 8'h16) && (div_ready == 1'b0)) ? 1'b1 : 1'b0;
+
+    always @(posedge clk) begin
+        if (!rst_n) begin
+            state     <= 2'b00;
+            div_ready <= 1'b0;
+            divres    <= 64'b0;
+            busy      <= 1'b0;
+            div_cnt   <= 6'd0;
+            quotient  <= 32'b0;
+            remainder <= 32'b0;
+            dividend_reg <= 32'b0;
+            divisor_reg  <= 32'b0;
+            div_sign     <= 1'b0;
+        end else begin
+            case (state)
+            2'b00: begin // DIV_FREE
+                if (div_start) begin
+                    state <= 2'b10;
+                    busy  <= 1'b1;
+                    div_ready <= 1'b0;
+                    div_cnt   <= 6'd0;
+                    div_sign <= exe_src1_i[31] ^ exe_src2_i[31];
+                    dividend_reg <= exe_src1_i[31] ? (~exe_src1_i + 1) : exe_src1_i;
+                    divisor_reg  <= exe_src2_i[31] ? (~exe_src2_i + 1) : exe_src2_i;
+                    quotient     <= 32'b0;
+                    remainder    <= 32'b0;
+                end else begin
+                    div_ready <= 1'b0;
+                    divres    <= 64'b0;
+                    busy      <= 1'b0;
+                end
+            end
+            2'b10: begin // DIV_ON
+                if (div_cnt < 6'd32) begin
+                    {remainder, dividend_reg} = {remainder, dividend_reg} << 1;
+                    if (remainder[31:0] >= divisor_reg) begin
+                        remainder = remainder - divisor_reg;
+                        quotient[31-div_cnt] = 1'b1;
+                    end
+                    div_cnt = div_cnt + 1;
+                end else begin
+                    // 符号修正
+                    if (div_sign) quotient = ~quotient + 1;
+                    if (exe_src1_i[31]) remainder = ~remainder + 1;
+                    divres <= {remainder, quotient};
+                    div_ready <= 1'b1;
+                    state <= 2'b11;
+                    busy  <= 1'b0;
+                end
+            end
+            2'b11: begin // DIV_END
+                if (!div_start) begin
+                    state     <= 2'b00;
+                    div_ready <= 1'b0;
+                end
+            end
+            endcase
+        end
+    end
+
+
+    // HI/LO输出，支持MULT和DIV
     assign exe_hilo_o = (rst_n == 1'b0) ? 64'b0 :
-        (exe_aluop_i == 8'h14) ? mulres : 64'b0; // MULT
+        (exe_aluop_i == 8'h14) ? mulres :
+        (exe_aluop_i == 8'h16) ? divres : 64'b0;
 
     // 直通信号
     assign exe_aluop_o = (rst_n == 1'b0) ? 8'b0 : exe_aluop_i;

@@ -108,6 +108,10 @@ wire [31:0] ret_addr;    //返回地址
 wire [31:0] pc_plus_4;   //pc+4
 wire [31:0] id_pc_plus_4;
 wire [31:0] id_ret_addr;
+//暂停相关信号
+wire [3:0] stall;
+wire stallreq_id;
+wire stallreq_exe;
 
 //例化取值阶段
 if_stage if_stage(
@@ -120,7 +124,8 @@ if_stage if_stage(
     .jump_addr_1(jump_addr_1),
     .jump_addr_2(jump_addr_2),
     .jump_addr_3(jump_addr_3),
-    .jtsel(jtsel)
+    .jtsel(jtsel),
+    .stall(stall)
 );
 
 //例化取值译码寄存器
@@ -130,7 +135,8 @@ ifid_reg if_id_reg(
     .if_pc(pc),
     .id_pc(id_pc_i),
     .if_pc_plus_4(pc_plus_4),
-    .id_pc_plus_4(id_pc_plus_4)
+    .id_pc_plus_4(id_pc_plus_4),
+    .stall(stall)
 );
 
 //例化译码阶段
@@ -163,7 +169,10 @@ id_stage id_stage(
     .jump_addr_3(jump_addr_3),
     .jtsel(jtsel),
     .ret_addr(ret_addr),
-    .pc_plus_4(id_pc_plus_4)
+    .pc_plus_4(id_pc_plus_4),
+    .exe2id_mreg(exe_mreg_o),
+    .mem2id_mreg(mem_mreg_o),
+    .stallreq_id(stallreq_id)
 );
 
 //例化通用寄存器堆
@@ -204,7 +213,8 @@ idexe_reg id_exe_reg(
     .exe_mreg(mreg_i),
     .exe_din(exe_din_i),
     .id_ret_addr(ret_addr),
-    .exe_ret_addr(id_ret_addr)
+    .exe_ret_addr(id_ret_addr),
+    .stall(stall)
 );
 
 //例化执行阶段
@@ -233,7 +243,9 @@ exe_stage exe_stage(
     .mem_2exe_hilo(mem_hilo_o),
     .wb2exe_whilo(wb_whilo_o),
     .wb2exe_hilo(wb_hilo_o),
-    .ret_addr(id_ret_addr)
+    .ret_addr(id_ret_addr),
+    .clk(clk),
+    .stallreq_exe(stallreq_exe)
     );
 
 //例化执行访存寄存器
@@ -255,7 +267,8 @@ exemem_reg exe_mem_reg(
     .mem_mreg(mem_mreg_i),
     .mem_din(mem_din_i),
     .mem_whilo(mem_whilo_i),
-    .mem_hilo(mem_hilo_i)
+    .mem_hilo(mem_hilo_i),
+    .stall(stall)
 );
 
 //例化访存阶段
@@ -329,6 +342,13 @@ hilo hilo_reg(
     .hi_o(exe_hi_i),
     .lo_o(exe_lo_i),
     .we(wb_whilo_o)
+);
+
+scu scu(
+    .rst_n(rst_n),
+    .stall(stall),
+    .stallreq_id(stallreq_id),
+    .stallreq_exe(stallreq_exe)
 );
 
 endmodule

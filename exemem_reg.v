@@ -17,7 +17,8 @@ module exemem_reg(
     output reg mem_mreg,
     output reg mem_whilo,
     output reg [31:0] mem_din,
-    output reg [63:0] mem_hilo
+    output reg [63:0] mem_hilo,
+    input wire [3:0] stall
 );
 
 always @(posedge clk or negedge rst_n) begin
@@ -30,7 +31,17 @@ always @(posedge clk or negedge rst_n) begin
         mem_whilo  <= 1'b0;
         mem_din    <= 32'b0;
         mem_hilo   <= 64'b0;
-    end else begin
+    end else if (stall[3] == 1'b1) begin
+        mem_aluop  <= 8'h11;
+        mem_wa     <= 5'b00000;
+        mem_wd     <= 32'b0;
+        mem_wreg   <= 1'b0;
+        mem_mreg   <= 1'b0;
+        mem_whilo  <= 1'b0;
+        mem_din    <= 32'b0;
+        mem_hilo   <= 64'b0;
+    end
+    else if (stall[3] == 1'b0) begin
         mem_aluop  <= exe_aluop;
         mem_wa     <= exe_wa;
         mem_wd     <= exe_wd;

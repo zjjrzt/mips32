@@ -24,7 +24,8 @@ module idexe_reg(
     output reg exe_whilo,
     //转移指令相关代码
     input wire [31:0] id_ret_addr, //译码阶段的返回地址
-    output reg [31:0] exe_ret_addr //执行阶段的返回地址
+    output reg [31:0] exe_ret_addr, //执行阶段的返回地址
+    input wire [3:0] stall
 );
 
 always @(posedge clk or negedge rst_n) begin
@@ -39,7 +40,19 @@ always @(posedge clk or negedge rst_n) begin
         exe_din     <= 32'b0;
         exe_whilo   <= 1'b0;
         exe_ret_addr <= 32'b0;
-    end else begin
+    end else if (stall[2] == 1'b1 && stall[3] == 1'b0) begin
+        exe_alutype <= 3'b000;
+        exe_aluop   <= 8'h16;
+        exe_src1    <= 32'b0;
+        exe_src2    <= 32'b0;
+        exe_wa      <= 5'b0;
+        exe_wreg    <= 1'b0;
+        exe_mreg    <= 1'b0;
+        exe_din     <= 32'b0;
+        exe_whilo   <= 1'b0;
+        exe_ret_addr <= 32'b0;
+    end
+    else if (stall[2] == 1'b0) begin
         exe_alutype <= id_alutype;
         exe_aluop   <= id_aluop;
         exe_src1    <= id_src1;

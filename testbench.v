@@ -13,14 +13,11 @@ module testbench;
     wire [31:0] dm;
 
     // 指令ROM实例化
-    blk_mem_gen_0 your_instance_name (
-  .clka(clk),    // input wire clka
-  .ena(ice),      // input wire ena
-  .wea(0),      // input wire [0 : 0] wea
-  .addra(iaddr[10:0]),  // input wire [10 : 0] addra
-  .dina(dina),    // input wire [31 : 0] dina
-  .douta(idata)  // output wire [31 : 0] douta
-);
+    rom u_rom(
+        .clk(clk),
+        .addr(iaddr[10:2]), // 取字对齐地址的低9位
+        .data(idata)
+    );
 
     // 实例化顶层模块
     top u_top(
