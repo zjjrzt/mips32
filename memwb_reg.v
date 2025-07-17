@@ -15,11 +15,19 @@ module memwb_reg(
     output reg wb_mreg,
     output reg [3:0] wb_dre,
     output reg wb_whilo,
-    output reg [63:0] wb_hilo
+    output reg [63:0] wb_hilo,
+
+    input wire mem_cp0_we,
+    input wire [4:0] mem_cp0_waddr,
+    input wire [31:0] mem_cp0_wdata,
+    input wire flush,
+    output reg wb_cp0_we,
+    output reg [4:0] wb_cp0_waddr,
+    output reg [31:0] wb_cp0_wdata
 );
 
 always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
+    if (!rst_n || flush) begin
         wb_dreg   <= 32'b0;
         wb_wa     <= 5'b0;
         wb_wreg   <= 1'b0;
@@ -27,6 +35,9 @@ always @(posedge clk or negedge rst_n) begin
         wb_dre    <= 4'b0;
         wb_whilo  <= 1'b0;
         wb_hilo   <= 64'b0;
+        wb_cp0_we <= 1'b0;
+        wb_cp0_waddr <= 5'b0;
+        wb_cp0_wdata <= 32'b0;
     end else begin
         wb_dreg   <= mem_dreg;
         wb_wa     <= mem_wa;
@@ -35,6 +46,9 @@ always @(posedge clk or negedge rst_n) begin
         wb_dre    <= dre;
         wb_whilo  <= mem_whilo;
         wb_hilo   <= mem_hilo;
+        wb_cp0_we <= mem_cp0_we;
+        wb_cp0_waddr <= mem_cp0_waddr;
+        wb_cp0_wdata <= mem_cp0_wdata;
     end
 end
 

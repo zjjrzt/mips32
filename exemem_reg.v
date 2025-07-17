@@ -18,11 +18,24 @@ module exemem_reg(
     output reg mem_whilo,
     output reg [31:0] mem_din,
     output reg [63:0] mem_hilo,
-    input wire [3:0] stall
+    input wire [3:0] stall,
+    input wire exe_cp0_we,
+    input wire [4:0] exe_cp0_waddr,
+    input wire [31:0] exe_cp0_wdata,
+    input wire flush,
+    input wire [31:0] exe_pc,
+    input wire exe_in_delay,
+    input wire [4:0] exe_exccode,
+    output reg mem_cp0_we,
+    output reg [4:0] mem_cp0_waddr,
+    output reg [31:0] mem_cp0_wdata,
+    output reg [31:0] mem_pc,
+    output reg mem_in_delay,
+    output reg [4:0] mem_exccode
 );
 
 always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
+    if (!rst_n || flush) begin
         mem_aluop  <= 8'b0;
         mem_wa     <= 5'b0;
         mem_wd     <= 32'b0;
@@ -31,6 +44,12 @@ always @(posedge clk or negedge rst_n) begin
         mem_whilo  <= 1'b0;
         mem_din    <= 32'b0;
         mem_hilo   <= 64'b0;
+        mem_cp0_we <= 1'b0;
+        mem_cp0_waddr <= 5'b0;
+        mem_cp0_wdata <= 32'b0;
+        mem_pc <= 32'b0;
+        mem_in_delay <= 1'b0;
+        mem_exccode <= 5'h10;
     end else if (stall[3] == 1'b1) begin
         mem_aluop  <= 8'h11;
         mem_wa     <= 5'b00000;
@@ -40,6 +59,12 @@ always @(posedge clk or negedge rst_n) begin
         mem_whilo  <= 1'b0;
         mem_din    <= 32'b0;
         mem_hilo   <= 64'b0;
+        mem_cp0_we <= 1'b0;
+        mem_cp0_waddr <= 5'b0;
+        mem_cp0_wdata <= 32'b0;
+        mem_pc <= 32'b0;
+        mem_in_delay <= 1'b0;
+        mem_exccode <= 5'h10;
     end
     else if (stall[3] == 1'b0) begin
         mem_aluop  <= exe_aluop;
@@ -50,6 +75,12 @@ always @(posedge clk or negedge rst_n) begin
         mem_whilo  <= exe_whilo;
         mem_din    <= exe_din;
         mem_hilo   <= exe_hilo;
+        mem_cp0_we <= exe_cp0_we;
+        mem_cp0_waddr <= exe_cp0_waddr;
+        mem_cp0_wdata <= exe_cp0_wdata;
+        mem_pc <= exe_pc;
+        mem_in_delay <= exe_in_delay;
+        mem_exccode <= exe_exccode;
     end
 end
 

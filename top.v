@@ -10,7 +10,8 @@ module top(
     output wire [31:0] daddr,
     output wire [3:0] we,
     output wire [31:0] din,
-    input wire [31:0] dm
+    input wire [31:0] dm,
+    input wire [5:0] int
 );
 
 //连接取值阶段与取值译码寄存器
@@ -112,6 +113,52 @@ wire [31:0] id_ret_addr;
 wire [3:0] stall;
 wire stallreq_id;
 wire stallreq_exe;
+//异常相关信号
+wire flush;
+wire [31:0] cp0_excaddr;
+wire flush_im;
+wire id_in_delay_i;
+wire [4:0] id_exccode;
+wire [31:0] id_pc;
+wire next_delay;
+wire id_in_delay;
+wire [31:0] cp0_addr;
+wire [4:0] exe_exccode;
+wire [31:0] exe_pc;
+wire [4:0] exe_cp0_addr;
+wire exe_in_delay;
+wire [4:0] mem2exe_cp0_wa;
+wire [31:0] mem2exe_cp0_wd;
+wire mem2exe_cp0_we;
+wire [4:0] wb2exe_cp0_wa;
+wire [31:0] wb2exe_cp0_wd;
+wire wb2exe_cp0_we;
+wire [31:0] cp0_data;
+wire [4:0] exe_exccode_o;
+wire [31:0] exe_pc_o;
+wire exe_in_delay_o;
+wire cp0_re_o;
+wire [4:0] cp0_raddr_o;
+wire [4:0] cp0_waddr_o;
+wire [31:0] cp0_wdata_o;
+wire [4:0] mem_exccode;
+wire [31:0] mem_pc;
+wire mem_in_delay;
+wire mem_cp0_we;
+wire [4:0] mem_cp0_waddr;
+wire [31:0] mem_cp0_wdata;
+wire [31:0] cp0_status;
+wire [31:0] cp0_cause;
+wire [4:0] mem_exccode_o;
+wire [31:0] mem_pc_o;
+wire mem_in_delay_o;
+wire wb_cp0_we;
+wire [4:0] wb_cp0_waddr;
+wire [31:0] wb_cp0_wdata;
+wire exe_cp0_we_o;
+wire [4:0] exe_cp0_waddr_o;
+wire [31:0] exe_cp0_wdata_o;
+
 
 //例化取值阶段
 if_stage if_stage(
@@ -125,7 +172,9 @@ if_stage if_stage(
     .jump_addr_2(jump_addr_2),
     .jump_addr_3(jump_addr_3),
     .jtsel(jtsel),
-    .stall(stall)
+    .stall(stall),
+    .flush(flush),
+    .cp0_excaddr(cp0_excaddr)
 );
 
 //例化取值译码寄存器
@@ -136,13 +185,15 @@ ifid_reg if_id_reg(
     .id_pc(id_pc_i),
     .if_pc_plus_4(pc_plus_4),
     .id_pc_plus_4(id_pc_plus_4),
-    .stall(stall)
+    .stall(stall),
+    .flush(flush)
 );
 
 //例化译码阶段
 id_stage id_stage(
     .rst_n(rst_n),
     .id_inst_i(inst),
+    .id_pc_i(id_pc_i),
     .rd1(rd1),
     .rd2(rd2),
     .ra1(ra1),
@@ -172,7 +223,14 @@ id_stage id_stage(
     .pc_plus_4(id_pc_plus_4),
     .exe2id_mreg(exe_mreg_o),
     .mem2id_mreg(mem_mreg_o),
-    .stallreq_id(stallreq_id)
+    .stallreq_id(stallreq_id),
+    .flush_im(flush_im),
+    .id_in_delay_i(id_in_delay_i),
+    .id_exccode_o(id_exccode),
+    .id_pc_o(id_pc),
+    .next_delay_o(next_delay),
+    .id_in_delay_o(id_in_delay),
+    .cp0_addr(cp0_addr)
 );
 
 //例化通用寄存器堆
@@ -214,7 +272,18 @@ idexe_reg id_exe_reg(
     .exe_din(exe_din_i),
     .id_ret_addr(ret_addr),
     .exe_ret_addr(id_ret_addr),
-    .stall(stall)
+    .stall(stall),
+    .flush(flush),
+    .next_delay_o(id_in_delay_i),
+    .id_exccode(id_exccode),
+    .id_pc(id_pc),
+    .next_delay_i(next_delay),
+    .id_in_delay(id_in_delay),
+    .id_cp0_addr(cp0_addr),
+    .exe_exccode(exe_exccode),
+    .exe_pc(exe_pc),
+    .exe_cp0_addr(exe_cp0_addr),
+    .exe_in_delay(exe_in_delay)
 );
 
 //例化执行阶段
@@ -245,7 +314,26 @@ exe_stage exe_stage(
     .wb2exe_hilo(wb_hilo_o),
     .ret_addr(id_ret_addr),
     .clk(clk),
-    .stallreq_exe(stallreq_exe)
+    .stallreq_exe(stallreq_exe),
+    .exe_exccode_i(exe_exccode),
+    .exe_pc_i(exe_pc),
+    .cp0_addr_i(exe_cp0_addr),
+    .exe_in_delay_i(exe_in_delay),
+    .mem2exe_cp0_wa(mem2exe_cp0_wa),
+    .mem2exe_cp0_wd(mem2exe_cp0_wd),
+    .mem2exe_cp0_we(mem2exe_cp0_we),
+    .wb2exe_cp0_wa(wb2exe_cp0_wa),
+    .wb2exe_cp0_wd(wb2exe_cp0_wd),
+    .wb2exe_cp0_we(wb2exe_cp0_we),
+    .cp0_data_i(cp0_data),
+    .exe_exccode_o(exe_exccode_o),
+    .exe_pc_o(exe_pc_o),
+    .exe_in_delay_o(exe_in_delay_o),
+    .cp0_re_o(cp0_re_o),
+    .cp0_raddr_o(cp0_raddr_o),
+    .cp0_we_o(exe_cp0_we_o),
+    .cp0_waddr_o(exe_cp0_waddr_o),
+    .cp0_wdata_o(exe_cp0_wdata_o)
     );
 
 //例化执行访存寄存器
@@ -268,7 +356,20 @@ exemem_reg exe_mem_reg(
     .mem_din(mem_din_i),
     .mem_whilo(mem_whilo_i),
     .mem_hilo(mem_hilo_i),
-    .stall(stall)
+    .stall(stall),
+    .flush(flush),
+    .exe_exccode(exe_exccode_o),
+    .exe_pc(exe_pc_o),
+    .exe_in_delay(exe_in_delay_o),
+    .exe_cp0_we(exe_cp0_we_o),
+    .exe_cp0_waddr(exe_cp0_waddr_o),
+    .exe_cp0_wdata(exe_cp0_wdata_o),
+    .mem_exccode(mem_exccode),
+    .mem_pc(mem_pc),
+    .mem_in_delay(mem_in_delay),
+    .mem_cp0_we(mem_cp0_we),
+    .mem_cp0_waddr(mem_cp0_waddr),
+    .mem_cp0_wdata(mem_cp0_wdata)
 );
 
 //例化访存阶段
@@ -292,7 +393,21 @@ mem_stage mem_stage(
     .dce(dce),
     .daddr(daddr),
     .din(din),
-    .we(we)
+    .we(we),
+    .cp0_we_o(mem2exe_cp0_we),
+    .cp0_waddr_o(mem2exe_cp0_wa),
+    .cp0_wdata_o(mem2exe_cp0_wd),
+    .mem_exccode_i(mem_exccode),
+    .mem_pc_i(mem_pc),
+    .mem_in_delay_i(mem_in_delay),
+    .cp0_we_i(mem_cp0_we),
+    .cp0_waddr_i(mem_cp0_waddr),
+    .cp0_wdata_i(mem_cp0_wdata),
+    .cp0_exccode(mem_exccode_o),
+    .cp0_pc(mem_pc_o),
+    .cp0_in_delay(mem_in_delay_o),
+    .cp0_status(cp0_status),
+    .cp0_cause(cp0_cause)
 );
 
 //例化访存写回寄存器
@@ -312,7 +427,14 @@ memwb_reg mem_wb_reg(
     .wb_mreg(wb_mreg_i),
     .wb_dre(wb_dre_i),
     .wb_whilo(wb_whilo_i),
-    .wb_hilo(wb_hilo_i)
+    .wb_hilo(wb_hilo_i),
+    .flush(flush),
+    .mem_cp0_we(mem2exe_cp0_we),
+    .mem_cp0_waddr(mem2exe_cp0_wa),
+    .mem_cp0_wdata(mem2exe_cp0_wd),
+    .wb_cp0_we(wb_cp0_we),
+    .wb_cp0_waddr(wb_cp0_waddr),
+    .wb_cp0_wdata(wb_cp0_wdata)
 );
 
 //例化写回阶段
@@ -330,7 +452,13 @@ wb_stage wb_stage(
     .wb_wd_o(wb_wd_o),
     .wb_wreg_o(wb_wreg_o),
     .wb_whilo_o(wb_whilo_o),
-    .wb_hilo_o(wb_hilo_o)
+    .wb_hilo_o(wb_hilo_o),
+    .cp0_we_o(wb2exe_cp0_we),
+    .cp0_waddr_o(wb2exe_cp0_wa),
+    .cp0_wdata_o(wb2exe_cp0_wd),
+    .cp0_we_i(wb_cp0_we),
+    .cp0_waddr_i(wb_cp0_waddr),
+    .cp0_wdata_i(wb_cp0_wdata)
 );
 
 //例化HILO寄存器
@@ -349,6 +477,26 @@ scu scu(
     .stall(stall),
     .stallreq_id(stallreq_id),
     .stallreq_exe(stallreq_exe)
+);
+
+cp0_reg cp0_reg(
+    .clk(clk),
+    .rst_n(rst_n),
+    .flush(flush),
+    .cp0_excaddr(cp0_excaddr),
+    .flush_im(flush_im),
+    .re(cp0_re_o),
+    .raddr(cp0_raddr_o),
+    .we(wb2exe_cp0_we),
+    .waddr(wb2exe_cp0_wa),
+    .wdata(wb2exe_cp0_wd),
+    .exccode_i(mem_exccode_o),
+    .pc_i(mem_pc_o),
+    .in_delay_i(mem_in_delay_o),
+    .status_o(cp0_status),
+    .cause_o(cp0_cause),
+    .data_o(cp0_data),
+    .int_i(int)
 );
 
 endmodule

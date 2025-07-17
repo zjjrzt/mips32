@@ -15,7 +15,7 @@ module testbench;
     // 指令ROM实例化
     rom u_rom(
         .clk(clk),
-        .addr(iaddr[10:2]), // 取字对齐地址的低9位
+        .addr(iaddr[9:2]), // 取字对齐地址的低9位
         .data(idata)
     );
 
@@ -30,7 +30,8 @@ module testbench;
         .daddr(daddr),
         .we(we),
         .din(din),
-        .dm(dm)
+        .dm(dm),
+        .int(6'b0)
     );
 
     ram u_ram(
@@ -54,7 +55,7 @@ module testbench;
         rst_n = 1;
         // 等待ROM内所有指令执行完毕（假设每条指令1周期，实际可根据iaddr最大值判断）
         instr_count = 0;
-        wait (iaddr == 156); // iaddr到达最后一条指令的下一个地址
+        wait (iaddr[10:3] == 200); // iaddr到达最后一条指令的下一个地址
         // 再等10个时钟周期
         repeat(10) @(posedge clk);
         $stop;

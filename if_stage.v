@@ -13,7 +13,10 @@ module if_stage
     input wire [1:0] jtsel,       //跳转选择信号
     output wire [31:0] pc_plus_4,
     //添加暂停模块相关代码
-    input wire [3:0] stall
+    input wire [3:0] stall,
+    //流水线异常相关代码
+    input wire flush,
+    input wire [31:0] cp0_excaddr
 );
 
 wire [31:0] pc_next; //下一个pc值
@@ -33,14 +36,18 @@ always @ (posedge clk) begin
     end
 end
 
-assign ice = (stall [1] == 1'b0) ? ce : 1'b0; //指令有效信号
-
+assign ice = (stall [1] == (1'b1 || flush)) ? 0 : ce; //指令有效信号
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         pc <= 32'h00000000; //复位时pc的初始值
     end
-    else if (stall[1] == 1'b0) begin
-        pc <= pc_next; //时钟上升沿更新pc值
+    else begin
+        if (flush) begin
+            pc <= cp0_excaddr;
+        end
+        else if (stall[0] == 1'b0) begin
+            pc <= pc_next; //更新pc值
+        end
     end
 end
 

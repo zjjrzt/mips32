@@ -7,12 +7,13 @@ module ifid_reg(
     output reg [31:0] id_pc,        //译码阶段的pc值
     input wire [31:0] if_pc_plus_4, //取指阶段的pc加4值
     output reg [31:0] id_pc_plus_4,  //译码阶段的pc加4值
-    input wire [3:0] stall
+    input wire [3:0] stall,
+    input wire flush
 );
 
 
     always @(posedge clk or negedge rst_n) begin
-        if(!rst_n) begin
+        if(!rst_n || flush == 1'b1) begin
             id_pc <= 32'h0000_3000;
             id_pc_plus_4 <= 32'h0000_3000;
         end else if (stall[1] == 1'b1 && stall[2] == 1'b0) begin

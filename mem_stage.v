@@ -20,7 +20,25 @@ module mem_stage(
     output wire dce,
     output wire [31:0] daddr,       //数据存储器地址
     output wire [31:0] din,         //数据存储器写入数据
-    output wire [3:0] we          // 新增we端口
+    output wire [3:0] we,          // 新增we端口
+
+    input wire cp0_we_i,
+    input wire [4:0] cp0_waddr_i,
+    input wire [31:0] cp0_wdata_i,
+    input wire wb2mem_cp0_we,
+    input wire [4:0] wb2mem_cp0_wa,
+    input wire [31:0] wb2mem_cp0_wd,
+    input wire [31:0] mem_pc_i,
+    input wire mem_in_delay_i,
+    input wire [4:0] mem_exccode_i,
+    input wire [31:0] cp0_status,
+    input wire [31:0] cp0_cause,
+    output wire cp0_we_o,
+    output wire [4:0] cp0_waddr_o,
+    output wire [31:0] cp0_wdata_o,
+    output wire [31:0] cp0_pc,
+    output wire cp0_in_delay,
+    output wire [4:0] cp0_exccode
 );
 
     // 指令类型判定
@@ -65,6 +83,26 @@ module mem_stage(
     assign mem_whilo_o = (rst_n == 1'b0) ? 1'b0  : mem_whilo_i;
     assign mem_hilo_o  = (rst_n == 1'b0) ? 64'b0 : mem_hilo_i;
     assign mem_mreg_o  = (rst_n == 1'b0) ? 1'b0  : mem_mreg_i;
+    //直接送往写回阶段的信号
+    assign cp0_we_o = (rst_n == 1'b0) ? 1'b0 : cp0_we_i;
+    assign cp0_waddr_o = (rst_n == 1'b0) ? 5'b0 : cp0_waddr_i;
+    assign cp0_wdata_o = (rst_n == 1'b0) ? 32'b0 : cp0_wdata_i;
+    //cp0中status和cause寄存器的值
+    wire [31:0] status = (wb2mem_cp0_we && wb2mem_cp0_wa == 12) ? wb2mem_cp0_wd : cp0_status;
+    wire [31:0] cause = (wb2mem_cp0_we && wb2mem_cp0_wa == 13) ? wb2mem_cp0_wd : cp0_cause;
+    //生成输入到cp0协处理器的信号
+    assign cp0_in_delay = (rst_n == 1'b0) ? 1'b0 : mem_in_delay_i;
+    reg [4:0] cp0_exccode_r;
+    assign cp0_exccode = cp0_exccode_r;
+    always @(*) begin
+        if (rst_n == 1'b0)
+            cp0_exccode_r = 5'h00;
+        else if ((status[15:10] & cause[15:10]) != 8'h00 && status[1] == 1'b0 && status[0] == 1'b1)
+            cp0_exccode_r = 5'h00;
+        else
+            cp0_exccode_r = mem_exccode_i;
+    end
+    assign cp0_pc = (rst_n == 1'b0) ? 32'h00000000 : mem_pc_i;
 
 endmodule
 

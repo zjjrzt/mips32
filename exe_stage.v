@@ -36,7 +36,28 @@ module exe_stage(
     input wire [31:0] ret_addr,
     //除法运算相关代码
     input wire clk,
-    output wire stallreq_exe
+    output wire stallreq_exe,
+    //异常相关信号
+    input wire [4:0] cp0_addr_i,
+    input wire [31:0] cp0_data_i,
+    input wire mem2exe_cp0_we,
+    input wire [4:0] mem2exe_cp0_wa,
+    input wire [31:0] mem2exe_cp0_wd,
+    input wire wb2exe_cp0_we,
+    input wire [31:0] wb2exe_cp0_wa,
+    input wire [31:0] wb2exe_cp0_wd,
+    input wire [31:0] exe_pc_i,
+    input wire exe_in_delay_i,
+    input wire [4:0] exe_exccode_i,
+
+    output wire cp0_re_o,
+    output wire [4:0] cp0_raddr_o,
+    output wire cp0_we_o,
+    output wire [4:0] cp0_waddr_o,
+    output wire [31:0] cp0_wdata_o,
+    output wire [31:0] exe_pc_o,
+    output wire exe_in_delay_o,
+    output wire [4:0] exe_exccode_o
 );
 
     // 逻辑运算结果
@@ -44,6 +65,10 @@ module exe_stage(
         (exe_aluop_i == 8'h1C) ? (exe_src1_i & exe_src2_i) : // AND
         (exe_aluop_i == 8'h1D) ? (exe_src1_i | exe_src2_i) : // ORI
         (exe_aluop_i == 8'h05) ? exe_src2_i : 32'b0;         // LUI
+    //保存cp0中寄存器的最新值
+    wire [31:0] cp0_t = (cp0_re_o!= 1'b1) ? 32'b0 :
+                        (mem2exe_cp0_we == 1'b1 && mem2exe_cp0_wa == cp0_raddr_o) ? mem2exe_cp0_wd :
+                        (wb2exe_cp0_we == 1'b1 && wb2exe_cp0_wa == cp0_raddr_o) ? wb2exe_cp0_wd : cp0_data_i;
 
     // 移位运算结果
     wire [31:0] shiftres = (rst_n == 1'b0) ? 32'b0 :
@@ -58,7 +83,8 @@ module exe_stage(
                         (wb2exe_whilo) ? wb2exe_hilo[31:0] : lo_i;
     wire [31:0] moveres = (rst_n == 1'b0) ? 32'b0 :
         (exe_aluop_i == 8'h0C) ? hi_t : // MFHI
-        (exe_aluop_i == 8'h0D) ? lo_t : 32'b0; // MFLO
+        (exe_aluop_i == 8'h0D) ? lo_t :  // MFLO
+        (exe_aluop_i == 8'h8C) ? cp0_t : 32'b0; // MFC0
 
     // 算术运算结果
     wire [31:0] arithres = (rst_n == 1'b0) ? 32'b0 :
@@ -74,6 +100,13 @@ module exe_stage(
 
     // 乘法结果
     wire [63:0] mulres = $signed(exe_src1_i) * $signed(exe_src2_i);
+    //确认cp0寄存器的读写访问信号
+    assign cp0_we_o = (rst_n == 1'b0) ? 1'b0 : (exe_aluop_i == 8'h86) ? 1'b1 : 1'b0;
+    assign cp0_wdata_o = (rst_n == 1'b0) ? 32'b0 :
+                            (exe_aluop_i == 8'h86) ? exe_src2_i : 32'b0;
+    assign cp0_waddr_o = (rst_n == 1'b0) ? 5'b0 : cp0_addr_i;
+    assign cp0_raddr_o = (rst_n == 1'b0) ? 5'b0 : cp0_addr_i;
+    assign cp0_re_o = (rst_n == 1'b0) ? 1'b0 : (exe_aluop_i == 8'h8C) ? 1'b1 : 1'b0;
 
     // 除法相关信号与状态机（全新实现，标准32次移位减法）
     reg  [63:0] divres;
@@ -87,6 +120,12 @@ module exe_stage(
     wire        div_start = (rst_n == 1'b0) ? 1'b0 : ((exe_aluop_i == 8'h16) && (div_ready == 1'b0)) ? 1'b1 : 1'b0;
     // 除法暂停信号
     assign stallreq_exe = (rst_n == 1'b0) ? 1'b0 : ((exe_aluop_i == 8'h16) && (div_ready == 1'b0)) ? 1'b1 : 1'b0;
+
+    //判断是否存在整数溢出的异常
+    wire [31:0] exe_src2_t = (exe_aluop_i == 8'h1B) ? (~exe_src2_i + 1) : exe_src2_i;
+    wire [31:0] arith_temp = exe_src1_i + exe_src2_t;
+    wire ov = ((!exe_src1_i[31] && !exe_src2_t[31] && arith_temp[31]) || (exe_src1_i[31] && exe_src2_t[31] && !arith_temp[31])) ? 1'b1 : 1'b0;
+    assign exe_exccode_o = (rst_n == 1'b0) ? 5'b0 : ((exe_aluop_i == 8'h18) && (ov == 1'b1)) ? 5'h0c : exe_exccode_i;
 
     always @(posedge clk) begin
         if (!rst_n) begin
@@ -160,6 +199,8 @@ module exe_stage(
     assign exe_mreg_o  = (rst_n == 1'b0) ? 1'b0 : exe_mreg_i;
     assign exe_whilo_o = (rst_n == 1'b0) ? 1'b0 : exe_whilo_i;
     assign exe_din_o   = (rst_n == 1'b0) ? 32'b0 : exe_din_i;
+    assign exe_pc_o = (rst_n == 1'b0) ? 32'b0 : exe_pc_i;
+    assign exe_in_delay_o = (rst_n == 1'b0) ? 1'b0 : exe_in_delay_i;
 
     // 写回数据选择
     assign exe_wd_o = (rst_n == 1'b0) ? 32'b0 :

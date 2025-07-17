@@ -14,13 +14,23 @@ module wb_stage(
     output wire wb_wreg_o,     //是否写入寄存器堆
     output wire [31:0] wb_wd_o,       //写回数据
     output wire wb_whilo_o,    //是否写入HI/LO寄存器
-    output wire [63:0] wb_hilo_o    //HI/LO寄存器数据
+    output wire [63:0] wb_hilo_o,    //HI/LO寄存器数据
+
+    input wire cp0_we_i,
+    input wire [4:0] cp0_waddr_i,
+    input wire [31:0] cp0_wdata_i,
+    output wire cp0_we_o,
+    output wire [4:0] cp0_waddr_o,
+    output wire [31:0] cp0_wdata_o
 );
     // 直通信号
     assign wb_wa_o    = (rst_n == 1'b0) ? 5'b0 : wb_wa_i;
     assign wb_wreg_o  = (rst_n == 1'b0) ? 1'b0 : wb_wreg_i;
     assign wb_whilo_o = (rst_n == 1'b0) ? 1'b0 : wb_whilo_i;
     assign wb_hilo_o  = (rst_n == 1'b0) ? 64'b0 : wb_hilo_i;
+    assign cp0_we_o = (rst_n == 1'b0) ? 1'b0 : cp0_we_i;
+    assign cp0_waddr_o = (rst_n == 1'b0) ? 5'b0 : cp0_waddr_i;
+    assign cp0_wdata_o = (rst_n == 1'b0) ? 32'b0 : cp0_wdata_i;
 
     // 数据存储器数据处理
     wire [31:0] data = (rst_n == 1'b0) ? 32'b0 :
