@@ -3,61 +3,30 @@
 module testbench;
     reg clk;
     reg rst_n;
-    wire [31:0] iaddr;
-    wire ice;
-    wire [31:0] idata;
-    wire dce;
-    wire [31:0] daddr;
-    wire [3:0] we;
-    wire [31:0] din;
-    wire [31:0] dm;
-
-    // 指令ROM实例化
-    rom u_rom(
-        .clk(clk),
-        .addr(iaddr[9:2]), // 取字对齐地址的低9位
-        .data(idata)
-    );
-
-    // 实例化顶层模块
-    top u_top(
+    wire [16:0] led;
+    wire [2:0] rgb_reg0;
+    wire [2:0] rgb_reg1;
+    wire [7:0] num_csn;
+    wire [6:0] num_a_g;
+    minips32 u_minips32(
         .clk(clk),
         .rst_n(rst_n),
-        .iaddr(iaddr),
-        .ice(ice),
-        .inst(idata),
-        .dce(dce),
-        .daddr(daddr),
-        .we(we),
-        .din(din),
-        .dm(dm),
-        .int(6'b0)
+        .led(led),
+        .rgb_reg0(rgb_reg0),
+        .rgb_reg1(rgb_reg1),
+        .num_csn(num_csn),
+        .num_a_g(num_a_g)
     );
 
-    ram u_ram(
-        .clk(clk),
-        .ena(dce),
-        .wea(we),
-        .addr(daddr[9:0]),
-        .dina(din),
-        .douta(dm)
-    );
 
     // 50MHz时钟
     initial clk = 0;
     always #10 clk = ~clk; // 20ns周期
-
-    // 仿真控制
-    integer instr_count;
     initial begin
-        rst_n = 0;
-        #100;
-        rst_n = 1;
-        // 等待ROM内所有指令执行完毕（假设每条指令1周期，实际可根据iaddr最大值判断）
-        instr_count = 0;
-        wait (iaddr[10:3] == 200); // iaddr到达最后一条指令的下一个地址
-        // 再等10个时钟周期
-        repeat(10) @(posedge clk);
-        $stop;
+        rst_n = 0; // 复位信号
+        #100; // 等待100ns
+        rst_n = 1; // 解除复位
     end
+
+
 endmodule

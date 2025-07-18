@@ -1,13 +1,14 @@
 module rom(
     input wire clk,
-    input wire [7:0] addr, // 9位地址可寻址512字
-    output reg [31:0] data
+    input wire [13:0] addra, // 15位地址可寻址32K字
+    input wire ena, // 使能信号
+    output reg [31:0] douta
 );
-    reg [31:0] mem [0:202]; // 203个值
+    reg [31:0] mem [0:32767]; // 32K字
     integer i;
     initial begin
         // 先全部清零
-        for (i = 0; i < 203; i = i + 1) mem[i] = 32'b0;
+        for (i = 0; i < 32768; i = i + 1) mem[i] = 32'b0;
         mem[0] = 32'h00608640;
         mem[1] = 32'h00688040;
         mem[2] = 32'h00010134;
@@ -212,9 +213,13 @@ module rom(
         mem[201] = 32'h00000000;
         mem[202] = 32'h00000000;
     end
-    reg [8:0] addr_r;
+    reg [13:0] addr_r;
     always @(posedge clk) begin
-        addr_r = addr;
-        data = mem[addr_r];
+        if (ena) begin
+        addr_r = addra;
+        douta = mem[addr_r];
+        end else begin
+            douta = 32'b0; // 如果未使能，输出为0
+        end
     end
 endmodule
