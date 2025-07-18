@@ -22,6 +22,7 @@ reg [31:0] badvaddr;
 reg [31:0] status;
 reg [31:0] cause;
 reg [31:0] epc;
+reg [31:0] cp0_excaddr_reg;
 
 assign status_o = status;
 assign cause_o = cause;
@@ -59,11 +60,25 @@ begin
 end
 endtask
 
-assign cp0_excaddr = (rst_n == 1'b0) ? 32'b0 :
-                        (exccode_i == 5'b00) ? 32'h040 :
-                        (exccode_i == 5'h11 && waddr == 14 && we) ? wdata :
-                        (exccode_i == 5'h11) ? epc :
-                        (exccode_i != 5'h10) ? 32'h100 : 32'h000;
+always @(posedge clk) begin
+    if (rst_n == 1'b0) begin
+        cp0_excaddr_reg <= 32'b0;
+    end else begin
+        if (exccode_i == 5'b00) begin
+            cp0_excaddr_reg <= 32'h040;
+        end else if (exccode_i == 5'h11 && waddr == 14 && we) begin
+            cp0_excaddr_reg <= wdata;
+        end else if (exccode_i == 5'h11) begin
+            cp0_excaddr_reg <= epc;
+        end else if (exccode_i != 5'h10) begin
+            cp0_excaddr_reg <= 32'h100;
+        end else begin
+            cp0_excaddr_reg <= 32'h000;
+        end
+    end
+end
+
+assign cp0_excaddr = cp0_excaddr_reg;
 
 always @ (posedge clk) begin
     if (rst_n == 1'b0) begin
@@ -79,8 +94,8 @@ always @ (posedge clk) begin
                     case(waddr)
                         8:badvaddr <= wdata;
                         12:status <= wdata;
-                        14:cause <= wdata;
-                        15:epc <= wdata;
+                        13:cause <= wdata;
+                        14:epc <= wdata;
                     endcase
                 end
             5'h11:

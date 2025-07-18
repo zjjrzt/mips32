@@ -173,7 +173,7 @@ if_stage if_stage(
     .jump_addr_3(jump_addr_3),
     .jtsel(jtsel),
     .stall(stall),
-    .flush(flush),
+    .flush(flush_im),
     .cp0_excaddr(cp0_excaddr)
 );
 
@@ -273,7 +273,7 @@ idexe_reg id_exe_reg(
     .id_ret_addr(ret_addr),
     .exe_ret_addr(id_ret_addr),
     .stall(stall),
-    .flush(flush),
+    .flush(flush_im),
     .next_delay_o(id_in_delay_i),
     .id_exccode(id_exccode),
     .id_pc(id_pc),
@@ -357,7 +357,7 @@ exemem_reg exe_mem_reg(
     .mem_whilo(mem_whilo_i),
     .mem_hilo(mem_hilo_i),
     .stall(stall),
-    .flush(flush),
+    .flush(flush_im),
     .exe_exccode(exe_exccode_o),
     .exe_pc(exe_pc_o),
     .exe_in_delay(exe_in_delay_o),
@@ -428,7 +428,7 @@ memwb_reg mem_wb_reg(
     .wb_dre(wb_dre_i),
     .wb_whilo(wb_whilo_i),
     .wb_hilo(wb_hilo_i),
-    .flush(flush),
+    .flush(flush_im),
     .mem_cp0_we(mem2exe_cp0_we),
     .mem_cp0_waddr(mem2exe_cp0_wa),
     .mem_cp0_wdata(mem2exe_cp0_wd),

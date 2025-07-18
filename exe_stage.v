@@ -101,9 +101,9 @@ module exe_stage(
     // 乘法结果
     wire [63:0] mulres = $signed(exe_src1_i) * $signed(exe_src2_i);
     //确认cp0寄存器的读写访问信号
-    assign cp0_we_o = (rst_n == 1'b0) ? 1'b0 : (exe_aluop_i == 8'h86) ? 1'b1 : 1'b0;
+    assign cp0_we_o = (rst_n == 1'b0) ? 1'b0 : (exe_aluop_i == 8'h8D) ? 1'b1 : 1'b0;
     assign cp0_wdata_o = (rst_n == 1'b0) ? 32'b0 :
-                            (exe_aluop_i == 8'h86) ? exe_src2_i : 32'b0;
+                            (exe_aluop_i == 8'h8D) ? exe_src2_i : 32'b0;
     assign cp0_waddr_o = (rst_n == 1'b0) ? 5'b0 : cp0_addr_i;
     assign cp0_raddr_o = (rst_n == 1'b0) ? 5'b0 : cp0_addr_i;
     assign cp0_re_o = (rst_n == 1'b0) ? 1'b0 : (exe_aluop_i == 8'h8C) ? 1'b1 : 1'b0;
