@@ -40,7 +40,7 @@ module idexe_reg(
     output reg [4:0] exe_exccode
 );
 
-always @(posedge clk or negedge rst_n) begin
+always @(posedge clk or negedge rst_n or posedge flush) begin
     if (!rst_n || flush) begin
         exe_alutype <= 3'b0;
         exe_aluop   <= 8'b0;

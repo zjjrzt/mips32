@@ -122,7 +122,7 @@ wire [4:0] id_exccode;
 wire [31:0] id_pc;
 wire next_delay;
 wire id_in_delay;
-wire [31:0] cp0_addr;
+wire [4:0] cp0_addr;
 wire [4:0] exe_exccode;
 wire [31:0] exe_pc;
 wire [4:0] exe_cp0_addr;
@@ -178,7 +178,7 @@ if_stage if_stage(
 );
 
 //例化取值译码寄存器
-ifid_reg if_id_reg(
+ifid_reg ifid_reg(
     .clk(clk),
     .rst_n(rst_n),
     .if_pc(pc),
@@ -467,8 +467,8 @@ hilo hilo_reg(
     .rst_n(rst_n),
     .hi_i(wb_hilo_o[63:32]),
     .lo_i(wb_hilo_o[31:0]),
-    .hi_o(exe_hi_i),
-    .lo_o(exe_lo_i),
+    .hi_o(hi_i),
+    .lo_o(lo_i),
     .we(wb_whilo_o)
 );
 

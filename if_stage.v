@@ -26,17 +26,10 @@ assign pc_next = (jtsel == 2'b00) ? pc_plus_4 :
                     (jtsel == 2'b10) ? jump_addr_3 :
                     (jtsel == 2'b11) ? jump_addr_2 : 32'h00000000;
 
-reg ce;
-always @ (posedge clk) begin
-    if (rst_n == 1'b0) begin
-        ce <= 1'b0;
-    end
-    else begin
-        ce <= 1'b1;
-    end
-end
+wire ce = (!rst_n) ? 1'b0 : 1'b1; //时钟使能信号
+//指令有效信号
 
-assign ice = (stall [1] == (1'b1 || flush)) ? 0 : ce; //指令有效信号
+assign ice = (stall [1] == 1'b1 || flush) ? 0 : ce; //指令有效信号
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         pc <= 32'h00000000; //复位时pc的初始值

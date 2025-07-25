@@ -27,7 +27,7 @@ always @(posedge clk or negedge rst_n) begin
         for (i = 0; i < 32; i = i + 1) begin
             regfile[i] <= 32'b0;
         end
-    end else if (we && wa != 5'b0) begin
+    end else if (we ) begin
         regfile[wa] <= wd;
     end
 end
@@ -42,7 +42,7 @@ always @(*) begin
         // 如果当前写入的寄存器地址与读寄存器1的地址相同，直接返回写入的数据
         rd1 = wd;
     end else begin
-        rd1 = regfile[ra1];
+        rd1 = regfile[wa];
     end
 end
 
@@ -56,7 +56,7 @@ always @(*) begin
         // 如果当前写入的寄存器地址与读寄存器2的地址相同，直接返回写入的数据
         rd2 = wd;
     end else begin
-        rd2 = regfile[ra2];
+        rd2 = regfile[re2];
     end
 end
 endmodule

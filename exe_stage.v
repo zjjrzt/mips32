@@ -44,7 +44,7 @@ module exe_stage(
     input wire [4:0] mem2exe_cp0_wa,
     input wire [31:0] mem2exe_cp0_wd,
     input wire wb2exe_cp0_we,
-    input wire [31:0] wb2exe_cp0_wa,
+    input wire [4:0] wb2exe_cp0_wa,
     input wire [31:0] wb2exe_cp0_wd,
     input wire [31:0] exe_pc_i,
     input wire exe_in_delay_i,

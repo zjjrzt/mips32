@@ -16,11 +16,10 @@ module io_dec(
 
 //IO读写使能信号
 wire led_we = we && (addr[15:0] == 16'hf000);
-wire led_reg0_we = we && (addr[15:0] == 16'hf100);
-wire led_reg1_we = we && (addr[15:0] == 16'hf104);
-wire num_we = we && (addr[15:0] == 16'hf200);
+wire led_reg0_we = we && (addr[15:0] == 16'hf004);
+wire led_reg1_we = we && (addr[15:0] == 16'hf008);
+wire num_we = we && (addr[15:0] == 16'hf010);
 wire timer_we = we && (addr[15:0] == 16'he000);
-
 
 
 
@@ -35,19 +34,19 @@ assign led_reg1 = led_reg1_data[2:0];
 reg [31:0] num_data;
 
 //IO输出信号
-always @ (posedge clk) begin
-    if (rst_n == 1'b0) begin
-        led_data <= 32'b0;
-        led_reg0_data <= 32'b0;
-        led_reg1_data <= 32'b0;
-        num_data <= 32'b0;
+always @ (negedge clk ) begin
+    if (!rst_n) begin
+        led_data = 32'b0;
+        led_reg0_data = 32'b0;
+        led_reg1_data = 32'b0;
+        num_data = 32'b0;
     end else begin
         if (ce == 1'b1) begin
             case ({led_we, led_reg0_we, led_reg1_we, num_we})
-                4'b1000: led_data <= data_i;
-                4'b0100: led_reg0_data <= data_i;
-                4'b0010: led_reg1_data <= data_i;
-                4'b0001: num_data <= data_i;
+                4'b1000: led_data = data_i;
+                4'b0100: led_reg0_data = data_i;
+                4'b0010: led_reg1_data = data_i;
+                4'b0001: num_data = data_i;
                 default: ;
             endcase
         end
@@ -56,13 +55,13 @@ end
 
 //timer计时器
 reg [31:0] timer;
-always @ (posedge clk) begin
-    if (rst_n == 1'b0) begin
-        timer <= 32'b0;
+always @ (negedge clk ) begin
+    if (!rst_n) begin
+        timer = 32'b0;
     end else if (timer_we) begin
-        timer <= data_i;
+        timer = data_i;
     end else begin
-        timer <= timer + 1'b1;
+        timer = timer + 1'b1;
     end
 end
 wire [31:0] data_t = (addr[15:0] == 16'he000) ? timer : 32'b0;
@@ -70,11 +69,11 @@ assign dout = {data_t[7:0], data_t[15:8], data_t[23:16], data_t[31:24]};
 
 //数码管显示
 reg [19:0] div_counter;
-always @ (posedge clk) begin
-    if (rst_n == 1'b0) begin
-        div_counter <= 20'b0;
+always @ (negedge clk ) begin
+    if (!rst_n) begin
+        div_counter = 20'b0;
     end else begin
-        div_counter <= div_counter + 1'b1;
+        div_counter = div_counter + 1'b1;
     end
 end
 
@@ -88,74 +87,74 @@ parameter [2:0] SEG7 = 3'b110;
 parameter [2:0] SEG8 = 3'b111;
 
 reg [3:0] value;
-always @ (posedge clk) begin
-    if (rst_n == 1'b0) begin
-        num_csn <= 8'b11111111;
-        value <= 4'b0;
+always @ (negedge clk ) begin
+    if (!rst_n) begin
+        num_csn = 8'b11111111;
+        value = 4'b0;
     end else begin
         case(div_counter[19:17])
             SEG1: begin
-                num_csn <= 8'b01111111;
-                value <= num_data[31:28];
+                num_csn = 8'b01111111;
+                value = num_data[31:28];
             end
             SEG2: begin
-                num_csn <= 8'b10111111;
-                value <= num_data[27:24];
+                num_csn = 8'b10111111;
+                value = num_data[27:24];
             end
             SEG3: begin
-                num_csn <= 8'b11011111;
-                value <= num_data[23:20];
+                num_csn = 8'b11011111;
+                value = num_data[23:20];
             end
             SEG4: begin
-                num_csn <= 8'b11101111;
-                value <= num_data[19:16];
+                num_csn = 8'b11101111;
+                value = num_data[19:16];
             end
             SEG5: begin
-                num_csn <= 8'b11110111;
-                value <= num_data[15:12];
+                num_csn = 8'b11110111;
+                value = num_data[15:12];
             end
             SEG6: begin
-                num_csn <= 8'b11111011;
-                value <= num_data[11:8];
+                num_csn = 8'b11111011;
+                value = num_data[11:8];
             end
             SEG7: begin
-                num_csn <= 8'b11111101;
-                value <= num_data[7:4];
+                num_csn = 8'b11111101;
+                value = num_data[7:4];
             end
             SEG8: begin
-                num_csn <= 8'b11111110;
-                value <= num_data[3:0];
+                num_csn = 8'b11111110;
+                value = num_data[3:0];
             end
             default: begin
-                num_csn <= 8'b11111111;
-                value <= 4'b0;
+                num_csn = 8'b11111111;
+                value = 4'b0;
             end
         endcase
     end
 end
 
-always @ (posedge clk) begin
-    if (rst_n == 1'b0) begin
-        num_a_g <= 7'b0000000;
+always @ (negedge clk ) begin
+    if (!rst_n) begin
+        num_a_g = 7'b0000000;
     end else begin
         case(value)
-            4'h0: num_a_g <= 7'b0000001; // 0
-            4'h1: num_a_g <= 7'b1001111; // 1
-            4'h2: num_a_g <= 7'b0010010; // 2
-            4'h3: num_a_g <= 7'b0000110; // 3
-            4'h4: num_a_g <= 7'b1001100; // 4
-            4'h5: num_a_g <= 7'b0100100; // 5
-            4'h6: num_a_g <= 7'b0100000; // 6
-            4'h7: num_a_g <= 7'b0001111; // 7
-            4'h8: num_a_g <= 7'b0000000; // 8
-            4'h9: num_a_g <= 7'b0000100; // 9
-            4'h10: num_a_g <= 7'b0001000; // A
-            4'h11: num_a_g <= 7'b1100000; // B
-            4'h12: num_a_g <= 7'b0110001; // C
-            4'h13: num_a_g <= 7'b1000010; // D
-            4'h14: num_a_g <= 7'b0110000; // E
-            4'h15: num_a_g <= 7'b0111000; // F
-            default: num_a_g <= 7'b0000000; // 无效
+            4'd0: num_a_g = 7'b0000001; // 0
+            4'd1: num_a_g = 7'b1001111; // 1
+            4'd2: num_a_g = 7'b0010010; // 2
+            4'd3: num_a_g = 7'b0000110; // 3
+            4'd4: num_a_g = 7'b1001100; // 4
+            4'd5: num_a_g = 7'b0100100; // 5
+            4'd6: num_a_g = 7'b0100000; // 6
+            4'd7: num_a_g = 7'b0001111; // 7
+            4'd8: num_a_g = 7'b0000000; // 8
+            4'd9: num_a_g = 7'b0000100; // 9
+            4'd10: num_a_g = 7'b0001000; // A
+            4'd11: num_a_g = 7'b1100000; // B
+            4'd12: num_a_g = 7'b0110001; // C
+            4'd13: num_a_g = 7'b1000010; // D
+            4'd14: num_a_g = 7'b0110000; // E
+            4'd15: num_a_g = 7'b0111000; // F
+            default: num_a_g = 7'b0000000; // 无效
         endcase
     end
 end

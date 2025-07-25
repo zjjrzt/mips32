@@ -11,7 +11,7 @@ module cp0_reg(
     input wire in_delay_i,
     input wire [4:0] exccode_i,
     output wire flush,
-    output reg flush_im,
+    output wire flush_im,
     output wire [31:0] cp0_excaddr,
     output wire [31:0] data_o,
     output wire [31:0] status_o,
@@ -23,18 +23,20 @@ reg [31:0] status;
 reg [31:0] cause;
 reg [31:0] epc;
 reg [31:0] cp0_excaddr_reg;
+reg flush_i;
 
 assign status_o = status;
 assign cause_o = cause;
 
 //根据异常信息生成flush信号
 assign flush = (rst_n == 1'b0) ? 1'b0 : (exccode_i != 5'h10) ? 1'b1 : 1'b0;
+assign flush_im = (rst_n) ? flush : 1'b0;
 
 always @ (posedge clk) begin
     if (rst_n == 1'b0) begin
-        flush_im <= 1'b0;
+        flush_i <= 1'b0;
     end else begin
-        flush_im <= flush;
+        flush_i <= flush;
     end
 end
 

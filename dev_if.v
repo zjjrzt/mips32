@@ -14,7 +14,7 @@ module dev_if(
     output reg [31:0] inst,
 
     output reg data_ce,
-    output reg [3:0] data_we,
+    output reg data_we,
     output reg [31:0] data_addr,
     output reg [31:0] data_din,
     output wire [31:0] dout,
@@ -43,12 +43,12 @@ end
 always @(*) begin
     if (rst_n == 1'b0) begin
         data_ce = 1'b0;
-        data_we = 4'b0;
+        data_we = 1'b0;
         data_addr = 32'b0;
         data_din = 32'b0;
     end else begin
-        data_ce = (daddr[31:16] != 4'hBFD0) ? dce : 1'b0;
-        data_we = we;
+        data_ce = (daddr[31:16] != 16'hBFD0) ? dce : 1'b0;
+        data_we = |we;
         data_addr = daddr;
         data_din = din;
     end
@@ -62,7 +62,7 @@ always @(*) begin
         io_addr = 32'b0;
         io_din = 32'b0;
     end else begin
-        io_ce = (daddr[31:16] == 4'hBFD0) ? dce : 1'b0;
+        io_ce = (daddr[31:16] == 16'hBFD0) ? dce : 1'b0;
         io_we = |we;
         io_addr = daddr;
         io_din = din;
@@ -70,6 +70,6 @@ always @(*) begin
 end
 
 //dout输出
-assign dout = (daddr[31:16] != 4'hBFD0) ? data_dout : io_dout;
+assign dout = (daddr[31:16] != 16'hBFD0) ? data_dout : io_dout;
 
 endmodule

@@ -12,8 +12,8 @@ module ifid_reg(
 );
 
 
-    always @(posedge clk or negedge rst_n) begin
-        if(!rst_n || flush == 1'b1) begin
+    always @(posedge clk or negedge rst_n or posedge flush) begin
+        if(!rst_n || flush) begin
             id_pc <= 32'h0000_3000;
             id_pc_plus_4 <= 32'h0000_3000;
         end else if (stall[1] == 1'b1 && stall[2] == 1'b0) begin

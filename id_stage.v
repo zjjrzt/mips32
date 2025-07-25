@@ -44,7 +44,7 @@ module id_stage(
     //流水线异常相关信号
     input wire id_in_delay_i,//是否延迟槽指令
     input wire flush_im,//清空指令队列
-    output wire [31:0] cp0_addr,//异常信号地址
+    output wire [4:0] cp0_addr,//异常信号地址
     output wire [31:0] id_pc_o,
     output wire id_in_delay_o,
     output wire next_delay_o,
@@ -54,7 +54,6 @@ module id_stage(
 
 //将大端模式的指令转换为小端模式
 wire [31:0] id_inst = (flush_im == 1'b1) ? 32'b0 :{id_inst_i[7:0], id_inst_i[15:8], id_inst_i[23:16], id_inst_i[31:24]};
-
 //提取指令字段
 wire [5:0] op = id_inst[31:26]; //操作码
 wire [4:0] rs = id_inst[25:21]; //源寄存器1
@@ -82,9 +81,9 @@ assign id_in_delay_o = (rst_n == 1'b0) ? 1'b0 : id_in_delay_i;
 
 //获得访存阶段要存入数据存储器的数据
 assign id_din_o = (rst_n == 1'b0) ? 32'b0 :
-                    (fwrd1) ? exe2id_wd : //从执行阶段转发
-                    (fwrd2) ? mem2id_wd : //从访存阶段转
-                    (rreg2) ? rd2 : 32'b0; //从寄存器堆读取
+                    (fwrd2 == 2'b01) ? exe2id_wd : //从执行阶段转发
+                    (fwrd2 == 2'b10) ? mem2id_wd : //从访存阶段转发
+                    (fwrd2 == 2'b11) ? rd2 : 32'b0; //从寄存器堆读取
 
 //第一级译码逻辑
 
